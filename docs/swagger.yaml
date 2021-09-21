@@ -87,6 +87,8 @@ paths:
       summary: Create a session
       description: Creates a new instance of a `session`.
     delete:
+      security:
+        - bearerAuth: [ ]
       tags:
         - sessions
       responses:
@@ -112,6 +114,10 @@ paths:
                     error: Invalid token
           description: Invalid Authorization header
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     user:
       title: Root Type for user

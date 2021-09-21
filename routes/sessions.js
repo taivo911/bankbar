@@ -46,7 +46,7 @@ router.delete('/', verifyToken, async function (req, res) {
         const session = await Session.findOne({_id: req.sessionId.toString()})
 
         // Remove session from MongoDB
-        await Session.deleteOne({_id: session._id.toString()})
+        await Session.deleteOne({_id: session.id.toString()})
 
         // 204 No content
         return res.status(204).end()
