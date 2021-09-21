@@ -15,8 +15,10 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 app.use(express.json())
 
 
-// /users endpoints
+// /endpoints
 app.use('/users', require('./routes/users'))
+
+app.use('/sessions', require('./routes/sessions'))
 
 mongoose.connect(process.env.MONGODB_URI, {}, function () {
     console.log('Connected to mongoDB')
