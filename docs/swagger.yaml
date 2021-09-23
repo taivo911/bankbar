@@ -1,7 +1,7 @@
 openapi: 3.0.2
 info:
-  title: yabarbank
-  version: 1.0.0
+  title: Barbank
+  version: 1.0.1
 paths:
   /users:
     summary: Path used to manage the list of users.
@@ -87,8 +87,6 @@ paths:
       summary: Create a session
       description: Creates a new instance of a `session`.
     delete:
-      security:
-        - bearerAuth: [ ]
       tags:
         - sessions
       responses:
@@ -113,11 +111,54 @@ paths:
                   value:
                     error: Invalid token
           description: Invalid Authorization header
+      security:
+        -
+          bearerAuth: []
+  /users/current:
+    get:
+      tags:
+        - users
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/user'
+              examples:
+                User details:
+                  value:
+                    accounts:
+                      -
+                        balance: 10000
+                        createdAt: '2021-09-17T11:55:46.091Z'
+                        currency: USD
+                        id: 661448346ca8e2735be4faf98
+                        name: Main
+                        number: abc4bc3bf862c1363906261ab23bb9ceb14
+                        userId: 661448346ca8e2735be4faf98
+                    id: 661448346ca8e2735be4faf98
+                    name: test
+                    username: test
+          description: Returns user's details
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+              examples:
+                Missing authorization header:
+                  value:
+                    error: Missing authorization header
+                Invalid authorization header:
+                  value:
+                    error: Invalid authorization header
+          description: Unauthorized
+      security:
+        -
+          bearerAuth: []
+      summary: Get user's details
+      description: Returns instance of user
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
   schemas:
     user:
       title: Root Type for user
@@ -131,9 +172,9 @@ components:
         name:
           type: string
       example:
-        username: henno
-        password: secret
-        name: Henno Täht
+        username: test
+        password: testtest
+        name: test
     error:
       title: Root Type for error
       description: ''
@@ -146,6 +187,10 @@ components:
     session:
       description: ''
       type: object
+  securitySchemes:
+    bearerAuth:
+      scheme: bearer
+      type: http
 tags:
   -
     name: sessions
