@@ -1,7 +1,7 @@
 openapi: 3.0.2
 info:
   title: Barbank
-  version: 1.0.1
+  version: 1.0.3
 paths:
   /users:
     summary: Path used to manage the list of users.
@@ -59,8 +59,8 @@ paths:
             examples:
               POST /sessions request body:
                 value:
-                  username: miki
-                  password: plutoonium
+                  username: test
+                  password: testtest
         required: true
       tags:
         - sessions
@@ -71,7 +71,7 @@ paths:
               examples:
                 POST /sessions 201 response:
                   value:
-                    token: 23m52jmnb52b524t4
+                    token: 615c0ba991b810f1daca206f
           description: Successful response.
         '401':
           content:
@@ -92,6 +92,16 @@ paths:
       responses:
         '204':
           description: Successful logout
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+              examples:
+                Invalid Authorization header format:
+                  value:
+                    error: Invalid authorization header format
+          description: Invalid Authorization header format
         '401':
           content:
             application/json:
@@ -101,19 +111,16 @@ paths:
                 Invalid Authorization header:
                   value:
                     error: Invalid authorization header
-                Invalid Authorization header format:
-                  value:
-                    error: Invalid authorization header format
-                Missing Authorization header:
-                  value:
-                    error: Missing Authorization header
                 Invalid token:
                   value:
                     error: Invalid token
+                Missing Authorization header:
+                  value:
+                    error: Missing Authorization header
           description: Invalid Authorization header
       security:
         -
-          bearerAuth: []
+          Bearer: []
   /users/current:
     get:
       tags:
@@ -130,34 +137,114 @@ paths:
                     accounts:
                       -
                         balance: 10000
-                        createdAt: '2021-09-17T11:55:46.091Z'
+                        createdAt: '2021-09-23T20:00:54.508Z'
                         currency: USD
-                        id: 661448346ca8e2735be4faf98
+                        id: 614cde2a57d341d33e89668e
                         name: Main
-                        number: abc4bc3bf862c1363906261ab23bb9ceb14
-                        userId: 661448346ca8e2735be4faf98
-                    id: 661448346ca8e2735be4faf98
+                        number: abc900220f41acec02d67fe4d087b108300
+                        userId: 614cde2a57d341d33e896690
+                    id: 614cde2a57d341d33e896690
                     name: test
                     username: test
           description: Returns user's details
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+              examples:
+                Invalid Authorization header format:
+                  value:
+                    error: Invalid authorization header format
+          description: Invalid Authorization header format
         '401':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
               examples:
-                Missing authorization header:
-                  value:
-                    error: Missing authorization header
-                Invalid authorization header:
+                Invalid Authorization header:
                   value:
                     error: Invalid authorization header
-          description: Unauthorized
+                Missing Authorization header:
+                  value:
+                    error: Missing Authorization header
+                Invalid token:
+                  value:
+                    error: Invalid token
+          description: Invalid Authorization header
       security:
         -
-          bearerAuth: []
+          Bearer: []
       summary: Get user's details
-      description: Returns instance of user
+      description: Returns instance of `user`
+  /transactions:
+    summary: Path used to manage the list of transactions.
+    description: >-
+      The REST endpoint/path used to list and create zero or more `transaction` entities.  This path
+      contains a `GET` and `POST` operation to perform the list and create tasks, respectively.
+    post:
+      requestBody:
+        description: A new `transaction` to be created.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/transaction'
+        required: true
+      tags:
+        - transactions
+      responses:
+        '204':
+          description: Successful transaction creation
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+              examples:
+                Invalid amount:
+                  value:
+                    error: invalid amount
+                Missing parameter:
+                  value:
+                    error: 'Transaction validation failed: .* : Path ''.*'' is required'
+                Parameter is shorter than the minimum allowed length:
+                  value:
+                    error: Path '.*' ('.*') is shorter that the minimum allowed length
+                Invalid Authorization header format:
+                  value:
+                    error: Invalid authorization header format
+          description: Invalid Authorization header format
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+              examples:
+                Invalid Authorization header:
+                  value:
+                    error: Invalid authorization header
+                Missing Authorization header:
+                  value:
+                    error: Missing Authorization header
+                Invalid token:
+                  value:
+                    error: Invalid token
+          description: Invalid Authorization header
+        '403':
+          content:
+            application/json:
+              examples:
+                Not your account:
+                  value:
+                    error: Not your account
+          description: Not your account
+      security:
+        -
+          Bearer: []
+      operationId: createtransaction
+      summary: Create a transaction
+      description: Creates a new instance of a `transaction`.
 components:
   schemas:
     user:
@@ -187,8 +274,29 @@ components:
     session:
       description: ''
       type: object
+    transaction:
+      title: Root Type for transaction
+      description: ''
+      type: object
+      properties:
+        accountFrom:
+          type: string
+        accountTo:
+          type: string
+        amount:
+          format: int32
+          type: integer
+        explanation:
+          type: string
+        senderName:
+          type: string
+      example:
+        accountFrom: b97900220f41acec02d67fe4d087b108300
+        accountTo: b97bf6039a10a4186d164b1c356df73a20c
+        amount: 0.01
+        explanation: Don’t go spend it all at once
   securitySchemes:
-    bearerAuth:
+    Bearer:
       scheme: bearer
       type: http
 tags:
@@ -197,4 +305,7 @@ tags:
     description: ''
   -
     name: users
+    description: ''
+  -
+    name: transactions
     description: ''

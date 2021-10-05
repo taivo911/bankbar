@@ -4,3 +4,4 @@
 .env
 static/vendor
 .sessions
+private.key
