@@ -5,7 +5,8 @@ module.exports = mongoose.model('Account', mongoose.Schema({
         number: {
             type: String,
             required: true,
-
+            min: 11,
+            max: 11,
             default: function () {
                 return process.env.BANK_PREFIX + require('md5')(new Date().toISOString())
             }
@@ -15,6 +16,7 @@ module.exports = mongoose.model('Account', mongoose.Schema({
         currency: {type: String, required: true, default: 'USD'},
         createdAt: {type: Date, default: new Date()}
     },
+
     {
         toJSON: {
             transform: (docIn, docOut) => {

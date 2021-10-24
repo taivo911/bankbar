@@ -4,14 +4,13 @@ const Account = require("./models/Account")
 const Session = require("./models/Session")
 const Transaction = require("./models/Transaction")
 const fetch = require("node-fetch")
-const jose = require("node-jose")
-const fs = require("fs")
-
-
+const jose = require('node-jose')
+const fs = require('fs')
+//const {sendRequest} = require("./middlewares");
 
 exports.verifyToken = async (req, res, next) => {
 
-    // Check Authorization header existance
+    // Check Authorization header existence
     let authorizationHeader = req.header('Authorization')
     if (!authorizationHeader) {
         return res.status(401).send({error: 'Missing Authorization header'})
@@ -44,8 +43,8 @@ exports.verifyToken = async (req, res, next) => {
 
 }
 
-exports.refreshListOfBanksFromCentralBank = async function refreshListOfBanksFromCentralBank(){
-    console.log('refreshing list of banks')
+exports.refreshListOfBanksFromCentralBank = async function refreshListOfBanksFromCentralBank() {
+    console.log('Refreshing list of banks')
 
     try {
 
@@ -64,7 +63,7 @@ exports.refreshListOfBanksFromCentralBank = async function refreshListOfBanksFro
             bulk.insert(bank)
         })
 
-        // Bulk inser (in parallel) all prepared data to DB
+        // Bulk insert (in parallel) all prepared data to DB
         await bulk.execute()
 
         console.log('Done')
@@ -73,123 +72,130 @@ exports.refreshListOfBanksFromCentralBank = async function refreshListOfBanksFro
     } catch (e) {
 
         //Handle error
-        console.log('Error:'+e.message)
-        return { error: e.message}
+        console.log('Error:' + e.message)
+        return {error: e.message}
     }
 
 }
+
+
 function isExpired(transaction) {
-    const expireDate = transaction.createdAt.setDate(transaction.createdAt.getDate() + 3)
-    return (new Date).getDate() > expireDate
+    // check of the transaction has expired
+    const expireDate = new Date(transaction.createdAt.setDate(transaction.createdAt.getDate() + 3))
+    return new Date > expireDate
 
 }
 
-
-
 async function setStatus(transaction, status, statusDetail) {
-    console.log('Setting transaction ' + transaction._id + ' to ' + status + (statusDetail? '(' + statusDetail + ')' : ''))
+
+    console.log('Setting transaction ' + transaction._id + ' as ' + status + (statusDetail ? ' (' + statusDetail + ')' : ''))
+    // Set transaction status to in progress
     transaction.status = status
     transaction.statusDetail = statusDetail
     await transaction.save()
-
 }
 
 async function createSignedTransaction(input) {
-    // create jwt
+
     let privateKey
     try {
-        privateKey = fs.readFileSync('private.key', "utf-8")
+        privateKey = fs.readFileSync('private.key', 'utf8')
         const keystore = jose.JWK.createKeyStore();
         const key = await keystore.add(privateKey, 'pem')
-        return await jose.JWS.createSign({format: 'compact'}, key).update(JSON.stringify(input), "utf-8").final()
-
+        return await jose.JWS.createSign({format: 'compact'}, key).update(JSON.stringify(input), "utf8").final()
     } catch (err) {
-        console.log('Error reading private key' + err)
+        console.error('Error reading private key' + err)
         throw Error('Error reading private key' + err)
     }
 }
 
 async function sendRequestToBank(destinationBank, transactionAsJwt) {
-    return await exports.sendPostRequest(destinationBank.transactionUrl, {jwt: transactionAsJwt});
+
+    return await exports.sendPostRequest(destinationBank.transactionUrl, {jwt: transactionAsJwt})
+
 }
-exports.sendPostRequest =  async function(url, data) {
-    return exports.sendRequest('post', url, data);
+
+exports.sendPostRequest = async (url, data) => {
+    return await exports.sendRequest('post', url, data)
 }
-exports.sendGetRequest = async function(url) {
-    return exports.sendRequest('get', url, null);
+
+exports.sendGetRequest = async (url) => {
+    return await exports.sendRequest('get', url, null)
 }
-exports.sendRequest = async function(method,url, data) {
+
+exports.sendRequest = async (method, url, data) => {
     let responseText = '';
 
     let options = {
         method,
         headers: {'Content-Type': 'application/json'}
     }
-    if(data) {
+
+    if (data) {
         options.body = JSON.stringify(data)
     }
-    try{
+
+    try {
         let response = await fetch(url, options);
-        // Get response body text
+
+        // Parse response body text
         responseText = await response.text()
 
-        return JSON.parse(responseText)
+        return JSON.parse(responseText);
+
     } catch (e) {
-        throw Error(JSON.stringify({
-            exceptionMessage: e.message,
-            responseText
-        }))
+        throw new Error('sendRequest('+url+'): ' + e.message +  (typeof responseText === 'undefined' ? '': '|' + responseText))
     }
 }
 
 async function refund(transaction) {
     try {
-        console.log('Refunding transaction ' + transaction._id + ' by ' + transaction.accountFrom)
         const accountFrom = await Account.findOne({number: transaction.accountFrom})
+        console.log('Refunding transaction ' + transaction._id + ' by ' + transaction.amount)
         accountFrom.balance += transaction.amount
     } catch (e) {
-        console.log('Error, refunding account: ')
-        console.log(' - Reason: ' + e.message)
+        console.log('Error refunding account: ')
+        console.log('Reason: ' + e.message)
     }
-
 }
 
-exports.processTransactions = async function (){
+exports.processTransactions = async function () {
 
-    //console.log('Running processTransactions')
-
-    // get pending transactions
+    // Get pending transactions
     const pendingTransactions = await Transaction.find({status: 'Pending'})
 
-    // Loop through all pending transactions
+    // Loop through all pending
     pendingTransactions.forEach(async transaction => {
 
-        let destinationBank;
-        //Assert that the transaction has not expired
-        if(isExpired(transaction)) {
-            await setStatus(transaction, 'Failed', 'Expired')
+        console.log('Processing transaction ' + transaction._id)
+
+        // Assert that the transaction has not expired
+        if (isExpired(transaction)) {
             await refund(transaction)
-            return
+            return await setStatus(transaction, 'Failed', 'Expired')
         }
 
-        // Set transaction status to in progress
+        // Set transaction status to in progress ________________________________________________________________
         await setStatus(transaction, 'In progress');
 
-        // Get the bank of accountTO
-        let bankPrefix = transaction.accountTo.substring(0,3)
-        destinationBank = await Bank.findOne({bankPrefix});
+        // Get the bank from accountTo
+        let bankPrefix = transaction.accountTo.substring(0, 3)
+        let destinationBank = await Bank.findOne({bankPrefix})
 
-        // If we dont have the bank in local db
+        // If we don't have the bank in local database
         if (!destinationBank) {
             let result = exports.refreshListOfBanksFromCentralBank()
             if (typeof result.error !== 'undefined') {
                 return await setStatus(transaction, 'Pending', 'Central bank refresh failed: ' + result.error)
-
             }
 
-            if(!destinationBank) {
+            destinationBank = Bank.setTraceFunction(traceFunction).findOne({bankPrefix});
+
+            if (!destinationBank) {
+                console.log('Failed', 'Bank' + bankPrefix + ' does not exist')
                 await refund(transaction);
-                return await setStatus(transaction, 'Failed', 'Bank' + bankPrefix + 'does not exist')
+                return await setStatus(transaction, 'Failed', 'Bank' + bankPrefix + ' does not exist')
+
             }
         }
 
@@ -200,26 +206,57 @@ exports.processTransactions = async function (){
                 amount: transaction.amount,
                 currency: transaction.currency,
                 explanation: transaction.explanation,
-                senderName: transaction.senderName,
+                senderName: transaction.senderName
             }));
+
+            /*if (typeof response.error !== 'undefined') {
+                return await setStatus(transaction, 'Failed', response.error)
+
+            }*/
 
             transaction.receiverName = response.receiverName
             console.log('Completed transaction ' + transaction._id)
             return await setStatus(transaction, 'Completed', '')
 
+
         } catch (e) {
-            console.log('Error sending request to destination bank: ')
-            console.log('- Transaction id: ' +transaction._id)
+            console.log(e)
+            console.log('Error sending request to destination bank:')
+            console.log('- Transaction id is: ' + transaction._id)
             console.log('- Error is: ' + e.message)
+
             return await setStatus(transaction, 'Pending', e.message)
+
         }
 
+        if (!bankTo) {console.log('loop: WARN: failed to get bankTo')
+            //set transaction status failed
+            transaction.status='failed'
+            transaction.statusDetail = 'There is no bank with prefix ' + bankPrefix
+            transaction.save()
+            return
+        }
+
+
+        // Actually send the request
+        const nock = require('nock')
+        let nockScope
+
+        if (process.env.Test_Mode === 'true') {
+            const nockUrl = new URL(bankTo.transactionUrl)
+
+            console.log('Nocking '+JSON.stringify(nockUrl))
+
+            nockScope = nock(`${nockUrl.protocol}//${nockUrl.host}`)
+                .persist()
+                .post(nockUrl.pathname)
+                .reply(200, {receiverName: "Juss"})
+        }
 
 
     }, Error)
 
 
     //Recursively call itself again
-   setTimeout(exports.processTransactions, 1000)
+    setTimeout(exports.processTransactions, 1000)
 }
-

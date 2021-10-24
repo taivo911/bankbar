@@ -15,4 +15,5 @@ module.exports = mongoose.model('User', mongoose.Schema({
             delete docOut.__v
         }
     }
+
 }))
